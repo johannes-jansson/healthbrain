@@ -5,6 +5,7 @@ from flask_pydantic_spec import FlaskPydanticSpec, Response, Request
 from sqlalchemy import create_engine, Integer, Float, TIMESTAMP, Column, String, Boolean, text, ForeignKey, Date
 # from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship, declarative_base
+from flask_sqlalchemy import SQLAlchemy
 
 
 # Settings object, based on pydantic's dotenv implementation
@@ -31,20 +32,17 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
 # Start the API
 app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URL
 api = FlaskPydanticSpec("flask")
+db = SQLAlchemy(app)
 
 
 # Pydantic Schemas
+class CreateUserBodyModel(BaseModel):
+    name: str
+
 class HealthExportMetricDataModel(BaseModel):
     qty: Optional[float]
     date: Optional[str]
@@ -67,7 +65,8 @@ class HealthExportBodyModel(BaseModel):
     data: HealthExportModel
 
 
-class HealthExportResponseModel(BaseModel):
+
+class ResponseModel(BaseModel):
     accepted: bool
 
 
@@ -101,11 +100,26 @@ def welcome():
     """Test if API is alive"""
     return jsonify({"greeting": "Hello World!"}), 200
 
+@app.route("/users/", methods=["POST"], strict_slashes=False)
+@api.validate(
+    body=Request(CreateUserBodyModel),
+    resp=Response(HTTP_200=ResponseModel),
+    tags=["api"],
+)
+def create_user():
+    """Creates users"""
+    body = CreateUserBodyModel.parse_obj(request.json)
+    new_user = User(**{'name': body.name})
+    db.session.add(new_user)
+    db.session.commit()
+    db.session.refresh(new_user)
+    return ResponseModel(accepted=True).dict()
+
 
 @app.route("/health-export/", methods=["POST"], strict_slashes=False)
 @api.validate(
     body=Request(HealthExportBodyModel),
-    resp=Response(HTTP_200=HealthExportResponseModel),
+    resp=Response(HTTP_200=ResponseModel),
     tags=["api"],
 )
 def health_export():
@@ -126,15 +140,14 @@ def health_export():
                                         'date': data.date,
                                         'weight': data.qty,
                                         'user_id': user_id})
-                print(data.date, data.qty)
-                # db.add(new_weight)
-                # db.commit()
-                # db.refresh(new_weight)
+                db.session.add(new_weight)
+                db.session.commit()
+                db.session.refresh(new_weight)
         else:
             print(f'skipping {metric.name}')
             # for data in metric.data:
             #     print(data.date, data.qty)
-    return HealthExportResponseModel(accepted=True).dict()
+    return ResponseModel(accepted=True).dict()
 
 
 if __name__ == "__main__":

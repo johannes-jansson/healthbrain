@@ -2,6 +2,7 @@ alembic
 pandas
 flask
 pydantic[dotenv]
+flask_sqlalchemy
 flask_pydantic
 flask_pydantic_spec
 psycopg2
