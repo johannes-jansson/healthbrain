@@ -1,0 +1,8 @@
+alembic
+pandas
+flask
+pydantic[dotenv]
+flask_pydantic
+flask_pydantic_spec
+psycopg2
+sqlalchemy
