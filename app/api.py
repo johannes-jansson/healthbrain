@@ -76,25 +76,26 @@ class User(Base):
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True)
     name = Column(String,  unique=True, nullable=False)
-    weights = relationship("Weight")
+    metrics = relationship("metric")
     created_at = Column(TIMESTAMP(timezone=True),
                         nullable=False, server_default=text("now()"))
     updated_at = Column(TIMESTAMP(timezone=True),
                         nullable=False, server_default=text("now()"))
 
 
-class Weight(Base):
-    __tablename__ = 'weights'
+class Metric(Base):
+    __tablename__ = 'metrics'
     id = Column(Integer, primary_key=True)
     date = Column(Date, nullable=False)
-    weight = Column(Float, nullable=False)
+    name = Column(String, nullable=False)
+    qty = Column(Float, nullable=False)
     user_id = Column(Integer,  ForeignKey("users.id"))
     created_at = Column(TIMESTAMP(timezone=True),
                         nullable=False, server_default=text("now()"))
     updated_at = Column(TIMESTAMP(timezone=True),
                         nullable=False, server_default=text("now()"))
     __table_args__ = (
-        db.UniqueConstraint('user_id', 'date',),
+        db.UniqueConstraint('user_id', 'date', 'name'),
     )
 
 
@@ -138,20 +139,16 @@ def health_export():
         raise
     body = HealthExportBodyModel.parse_obj(request.json)
     for metric in body.data.metrics:
-        if metric.name == 'weight_body_mass':
-            for data in metric.data:
-                stmt = insert(Weight).values(
-                    date=data.date,
-                    weight=data.qty,
-                    user_id=user_id)
-                stmt = stmt.on_conflict_do_update(
-                    index_elements=[Weight.date, Weight.user_id], set_=dict(weight=stmt.excluded.weight, updated_at='now()')
-                ).returning(Weight)
-                db.session.execute(stmt)
-        else:
-            print(f'skipping {metric.name}')
-            # for data in metric.data:
-            #     print(data.date, data.qty)
+        for data in metric.data:
+            stmt = insert(Metric).values(
+                date=data.date,
+                qty=data.qty,
+                name=metric.name,
+                user_id=user_id)
+            stmt = stmt.on_conflict_do_update(
+                index_elements=[Metric.date, Metric.user_id, Metric.name], set_=dict(qty=stmt.excluded.qty, updated_at='now()')
+            ).returning(Metric)
+            db.session.execute(stmt)
     db.session.commit()
     return ResponseModel(accepted=True).dict()
 
