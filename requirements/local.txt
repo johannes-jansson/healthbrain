@@ -7,3 +7,5 @@ flask_pydantic
 flask_pydantic_spec
 psycopg2
 sqlalchemy
+dash
+setuptools
