@@ -6,6 +6,7 @@ from sqlalchemy import create_engine, Integer, Float, TIMESTAMP, Column, String,
 # from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship, declarative_base
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.dialects.postgresql import insert
 
 
 # Settings object, based on pydantic's dotenv implementation
@@ -139,17 +140,19 @@ def health_export():
     for metric in body.data.metrics:
         if metric.name == 'weight_body_mass':
             for data in metric.data:
-                new_weight = Weight(**{
-                                        'date': data.date,
-                                        'weight': data.qty,
-                                        'user_id': user_id})
-                db.session.add(new_weight)
-                db.session.commit()
-                db.session.refresh(new_weight)
+                stmt = insert(Weight).values(
+                    date=data.date,
+                    weight=data.qty,
+                    user_id=user_id)
+                stmt = stmt.on_conflict_do_update(
+                    index_elements=[Weight.date, Weight.user_id], set_=dict(weight=stmt.excluded.weight, updated_at='now()')
+                ).returning(Weight)
+                db.session.execute(stmt)
         else:
             print(f'skipping {metric.name}')
             # for data in metric.data:
             #     print(data.date, data.qty)
+    db.session.commit()
     return ResponseModel(accepted=True).dict()
 
 
