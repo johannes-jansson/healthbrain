@@ -74,7 +74,7 @@ class ResponseModel(BaseModel):
 class User(Base):
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True)
-    name = Column(String,  nullable=False)
+    name = Column(String,  unique=True, nullable=False)
     weights = relationship("Weight")
     created_at = Column(TIMESTAMP(timezone=True),
                         nullable=False, server_default=text("now()"))
