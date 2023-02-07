@@ -6,7 +6,8 @@ from pydantic import BaseSettings
 from sqlalchemy import create_engine
 
 
-alpha = 0.1
+alpha = 0.1  # Used for ewm calculations
+relevant_metrics = ['weight_body_mass', 'dietary_energy']
 
 
 class Settings(BaseSettings):
@@ -29,14 +30,17 @@ engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
 app = Dash(__name__)
 
+relevant_metrics_string = '\',\''.join(relevant_metrics)
 sql = """
 select
-  date, qty
+  date, name, qty
 from metrics
-where name = 'weight_body_mass'
-"""
+where name in {metrics}
+""".format(metrics=f"('{relevant_metrics_string}')")
 df = pd.read_sql(sql, engine)
-df['weight_ewm'] = df['qty'].ewm(alpha=alpha).mean() # https://deaddy.net/on-tracking-bodyweight.html
+df = df.pivot(index='date',columns='name',values='qty').reset_index()
+df['weight_body_mass'] = df['weight_body_mass'].interpolate(method='linear', limit_direction='forward', axis=0)
+df['weight_ewm'] = df['weight_body_mass'].ewm(alpha=alpha).mean() # https://deaddy.net/on-tracking-bodyweight.html
 df['weight_diff_weekly_ewm'] = df['weight_ewm'] - df['weight_ewm'].shift(7)
 
 # weight_ewm today vs 7 days ago
@@ -45,15 +49,15 @@ weight_ewm_change_4d = df.iloc[-1]['weight_ewm'] - df.iloc[-5]['weight_ewm']
 outstring = f"current weekly weight diff is {round(weight_ewm_change_7d, 2)} kg (goal is 0.19)"
 outstring = f"current 4-day weight diff is {round(weight_ewm_change_4d, 2)} kg (goal is 0.11)"
 
-fig = px.line(df, x="date", y="qty")
+fig = px.line(df, x="date", y="weight_body_mass")
 fig.add_trace(go.Scatter(x=df['date'], y=df['weight_ewm']))
 
 app.layout = html.Div(children=[
-    html.H1(children='HealthBrain'),
+    html.H1(children='HealthBrain 🧠'),
     html.Div(children=outstring),
 
     dcc.Graph(
-        id='example-graph',
+        id='weight-graph',
         figure=fig
     ),
 ])
