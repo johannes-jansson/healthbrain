@@ -7,6 +7,7 @@ from sqlalchemy import create_engine
 
 
 alpha = 0.1  # Used for ewm calculations
+days = 3
 relevant_metrics = ['weight_body_mass', 'dietary_energy']
 
 
@@ -44,10 +45,9 @@ df['weight_ewm'] = df['weight_body_mass'].ewm(alpha=alpha).mean() # https://dead
 df['weight_diff_weekly_ewm'] = df['weight_ewm'] - df['weight_ewm'].shift(7)
 
 # weight_ewm today vs 7 days ago
-weight_ewm_change_7d = df.iloc[-1]['weight_ewm'] - df.iloc[-8]['weight_ewm']
-weight_ewm_change_4d = df.iloc[-1]['weight_ewm'] - df.iloc[-5]['weight_ewm']
-outstring = f"current weekly weight diff is {round(weight_ewm_change_7d, 2)} kg (goal is 0.19)"
-outstring = f"current 4-day weight diff is {round(weight_ewm_change_4d, 2)} kg (goal is 0.11)"
+weight_ewm_change_xd = df.iloc[-1]['weight_ewm'] - df.iloc[-(days+1)]['weight_ewm']
+in_avg_xd = df.iloc[-(days+1):-1]['dietary_energy'].mean()
+outstring = f"current {days}-day weight diff is {round(weight_ewm_change_xd, 2)} kg on {round(in_avg_xd)} kcal (goal is 0.11)"
 
 fig = px.line(df, x="date", y="weight_body_mass")
 fig.add_trace(go.Scatter(x=df['date'], y=df['weight_ewm']))
