@@ -52,13 +52,18 @@ outstring = f"current 4-day weight diff is {round(weight_ewm_change_4d, 2)} kg (
 fig = px.line(df, x="date", y="weight_body_mass")
 fig.add_trace(go.Scatter(x=df['date'], y=df['weight_ewm']))
 
+fig2 = px.bar(df, x="date", y="dietary_energy")
+
 app.layout = html.Div(children=[
     html.H1(children='HealthBrain 🧠'),
     html.Div(children=outstring),
-
     dcc.Graph(
         id='weight-graph',
         figure=fig
+    ),
+    dcc.Graph(
+        id='kcal-graph',
+        figure=fig2
     ),
 ])
 
