@@ -44,6 +44,7 @@ df = df.pivot(index='date',columns='name',values='qty').reset_index()
 df['weight_body_mass'] = df['weight_body_mass'].interpolate(method='linear', limit_direction='forward', axis=0)
 df['weight_ewm'] = df['weight_body_mass'].ewm(alpha=alpha).mean() # https://deaddy.net/on-tracking-bodyweight.html
 df['weight_diff_weekly_ewm'] = df['weight_ewm'] - df['weight_ewm'].shift(7)
+df['dietary_energy_r7'] = df['dietary_energy'].rolling(7).mean()
 
 # weight_ewm today vs x days ago
 weight_ewm_change_xd = df.iloc[-1]['weight_ewm'] - df.iloc[-(days+1)]['weight_ewm']
@@ -54,6 +55,7 @@ fig = px.line(df, x="date", y="weight_body_mass")
 fig.add_trace(go.Scatter(x=df['date'], y=df['weight_ewm']))
 
 fig2 = px.bar(df, x="date", y="dietary_energy")
+fig2.add_trace(go.Scatter(x=df['date'], y=df['dietary_energy_r7']))
 
 app.layout = html.Div(children=[
     html.H1(children='HealthBrain 🧠'),
