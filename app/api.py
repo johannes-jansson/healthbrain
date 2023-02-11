@@ -76,7 +76,7 @@ class User(Base):
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True)
     name = Column(String,  unique=True, nullable=False)
-    metrics = relationship("metric")
+    metrics = relationship("Metric")
     created_at = Column(TIMESTAMP(timezone=True),
                         nullable=False, server_default=text("now()"))
     updated_at = Column(TIMESTAMP(timezone=True),
