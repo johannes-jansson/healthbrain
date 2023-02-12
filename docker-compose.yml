@@ -13,6 +13,36 @@ services:
     networks:
       - default
 
+  api:
+    build: 
+      context: .
+    container_name: healthbrain_api
+    ports:
+      - '8787:8787'
+    restart: always
+    env_file:
+      - ./.env
+    networks:
+      - default
+    depends_on:
+      - postgres
+    command: app/api.py
+
+  dashboard:
+    build: 
+      context: .
+    container_name: healthbrain_dashboard
+    ports:
+      - '8050:8050'
+    restart: always
+    env_file:
+      - ./.env
+    networks:
+      - default
+    depends_on:
+      - postgres
+    command: app/dashboard.py
+
 volumes:
   postgres-db:
 
