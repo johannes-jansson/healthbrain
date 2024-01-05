@@ -9,3 +9,4 @@ psycopg2
 pydantic[dotenv]
 setuptools
 sqlalchemy<2.0
+openpyxl
